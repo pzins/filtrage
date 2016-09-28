@@ -1,2 +1,2 @@
-# filtres
+# filtrage
 traitement d'images
