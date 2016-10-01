@@ -9,6 +9,15 @@ using	namespace	cv;
 void printMat(const Mat& m){
     for(int i = 0; i < m.rows; i++)
     {
+        const uchar* pt = m.ptr<uchar>(i);
+        for(int j = 0; j < m.cols; j++)
+            std::cout << static_cast<unsigned>(*(pt+j)) << " ";
+        std::cout << std::endl;
+    }
+}
+void printKernel(const Mat& m){
+    for(int i = 0; i < m.rows; i++)
+    {
         const char* pt = m.ptr<char>(i);
         for(int j = 0; j < m.cols; j++)
             std::cout << static_cast<int>(*(pt+j)) << " ";
@@ -29,12 +38,15 @@ float convolution_norm(const Mat& _img, const Mat& _kernel){
         for(int i = 0; i < _img.rows; i++)
         {
             const char* kernel_line = _kernel.ptr<char>(i);
-            const char* img_line = _img.ptr<char>(i);
+            const uchar* img_line = _img.ptr<uchar>(i);
             for(int j = 0; j < _img.cols; j++){
-                res += *(kernel_line+j) * *(img_line+j);
+                res += static_cast<int>(*(kernel_line+j)) * static_cast<int>(*(img_line+j));
             }
         }
-        return res/(_kernel.rows * _kernel.cols);
+        res = res/(_kernel.rows*_kernel.cols);
+        if(res < 0) return 0;
+        if(res > 255) return 255;
+        return res;
     }
 }
 float convolution(const Mat& _img, const Mat& _kernel){
@@ -49,9 +61,9 @@ float convolution(const Mat& _img, const Mat& _kernel){
         for(int i = 0; i < _img.rows; i++)
         {
             const char* kernel_line = _kernel.ptr<char>(i);
-            const char* img_line = _img.ptr<char>(i);
+            const uchar* img_line = _img.ptr<uchar>(i);
             for(int j = 0; j < _img.cols; j++){
-                res += *(kernel_line+j) * *(img_line+j);
+                res += static_cast<int>(*(kernel_line+j)) * static_cast<int>(*(img_line+j));
             }
         }
         if(res < 0) return 0;
@@ -61,26 +73,30 @@ float convolution(const Mat& _img, const Mat& _kernel){
 }
 void filter(Mat& _img, const Mat& _kernel)
 {
-    Mat tmp;
-    Mat reference_img = _img.clone();
-
-    for(int i = _kernel.rows/2; i < reference_img.rows-_kernel.rows/2; i++)
+    if(_kernel.rows != _kernel.cols)
     {
-        uchar* prev_line = reference_img.ptr<uchar>(i-1);
-        uchar* curr_line = reference_img.ptr<uchar>(i);
-        uchar* next_line = reference_img.ptr<uchar>(i+1);
-        uchar* current = _img.ptr<uchar>(i);
-        for(int j = _kernel.cols/2; j < reference_img.cols-_kernel.cols/2; j++)
-        {
-            tmp = (Mat_<uchar>(3,3) <<  prev_line[j-1], prev_line[j], prev_line[j+1],
-                                        curr_line[j-1], curr_line[j], curr_line[j+1],
-                                        next_line[j-1], next_line[j], next_line[j+1]);
-
-            int res = convolution(tmp, _kernel);
-            *(current + j) = uchar(res);
-            }
+        std::cerr << "Error filter : kernel not a square" << std::endl;
     }
+    else if(_kernel.rows % 2 != 1)
+    {
+        std::cerr << "Error filter : bad size kernel" << std::endl;
+    }
+    else
+    {
+        Mat ref_img = _img.clone();
+        int len = _kernel.rows/2;
 
+        for(int i = len; i < ref_img.rows-len; i++)
+        {
+            uchar* element = _img.ptr<uchar>(i);
+            for(int j = len; j < ref_img.cols-len; j++)
+            {
+                Mat tmp = ref_img(Rect(j-len, i-len, 2*len+1, 2*len+1));
+                int res = convolution_norm(tmp, _kernel);
+                *(element + j) = uchar(res);
+            }
+        }
+    }
 }
 Mat sobel(Mat source)
 {
@@ -110,20 +126,20 @@ Mat sobel(Mat source)
 int main()
 {
 //    Mat kernel = (Mat_<char>(3,3) << -1,0,1,-2,0,2,-1,0,1);
-    Mat kernel = (Mat_<char>(3,3) << -1,-1,-1,-1,8,-1,-1,-1,-1);
+//    Mat kernel = (Mat_<char>(3,3) << -1,-1,-1,-1,8,-1,-1,-1,-1);
+    Mat kernel = Mat::ones(7,7, CV_8U);
 
-    Mat img = imread("lyon.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+
+    Mat img = imread("trait.jpg", CV_LOAD_IMAGE_GRAYSCALE);
     if(img.empty()){
         std::cout << "error image" << std::endl;
     }
     namedWindow("original");
-    namedWindow("filtered");
-    namedWindow("sobel");
     imshow("original",img);
 
-    imshow("sobel",sobel(img));
     filter(img, kernel);
 
+    namedWindow("filtered");
     imshow("filtered",img);
     waitKey();
     return 0;
