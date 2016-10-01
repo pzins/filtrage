@@ -6,6 +6,8 @@
 using	namespace	std;
 using	namespace	cv;
 
+
+//print Mat image CV_8U
 void printMat(const Mat& m){
     for(int i = 0; i < m.rows; i++)
     {
@@ -15,6 +17,7 @@ void printMat(const Mat& m){
         std::cout << std::endl;
     }
 }
+//print Mat kernel CV_8S
 void printKernel(const Mat& m){
     for(int i = 0; i < m.rows; i++)
     {
@@ -25,7 +28,7 @@ void printKernel(const Mat& m){
     }
 }
 
-
+//compute convolution with normalization
 float convolution_norm(const Mat& _img, const Mat& _kernel){
     if(_kernel.size != _img.size)
     {
@@ -49,6 +52,8 @@ float convolution_norm(const Mat& _img, const Mat& _kernel){
         return res;
     }
 }
+
+//computer convolution without normalization
 float convolution(const Mat& _img, const Mat& _kernel){
     if(_kernel.size != _img.size)
     {
@@ -71,6 +76,8 @@ float convolution(const Mat& _img, const Mat& _kernel){
         return res;
     }
 }
+
+//filter _img with _kernel
 void filter(Mat& _img, const Mat& _kernel)
 {
     if(_kernel.rows != _kernel.cols)
@@ -97,30 +104,6 @@ void filter(Mat& _img, const Mat& _kernel)
             }
         }
     }
-}
-Mat sobel(Mat source)
-{
-    Mat img(source.size().height, source.size().width, CV_8UC1);
-    int p00, p01, p02, p10, p12, p20, p21, p22;
-    int H,V, GN;
-    for(int i  = 0; i < img.size().height * img.size().width; ++i)
-    {
-        p00 = source.at<uchar>(i);
-        p01 = source.at<uchar>(i+1);
-        p02 = source.at<uchar>(i+2);
-        p10 = source.at<uchar>(i+img.size().width);
-        p12 = source.at<uchar>(i+img.size().width+2);
-        p20 = source.at<uchar>(i+2*img.size().width);
-        p21 = source.at<uchar>(i+2*img.size().width+1);
-        p22 = source.at<uchar>(i+2*img.size().width+2);
-        H = -p00-2*p01-p02+p20+2*p21+p22;
-        V = -p00+p02-2*p10+2*p12-p20+p22;
-
-        GN = abs(H) + abs(V);
-        if(GN > 255) GN = 255;
-        img.at<uchar>(i) = GN;
-    }
-    return img;
 }
 
 int main()
@@ -219,6 +202,31 @@ Mat prewitt(Mat source)
         p22 = source.at<uchar>(i+2*img.size().width+2);
         H = -p00-p01-p02+p20+p21+p22;
         V = -p00+p02-p10+p12-p20+p22;
+
+        GN = abs(H) + abs(V);
+        if(GN > 255) GN = 255;
+        img.at<uchar>(i) = GN;
+    }
+    return img;
+}
+
+Mat sobel(Mat source)
+{
+    Mat img(source.size().height, source.size().width, CV_8UC1);
+    int p00, p01, p02, p10, p12, p20, p21, p22;
+    int H,V, GN;
+    for(int i  = 0; i < img.size().height * img.size().width; ++i)
+    {
+        p00 = source.at<uchar>(i);
+        p01 = source.at<uchar>(i+1);
+        p02 = source.at<uchar>(i+2);
+        p10 = source.at<uchar>(i+img.size().width);
+        p12 = source.at<uchar>(i+img.size().width+2);
+        p20 = source.at<uchar>(i+2*img.size().width);
+        p21 = source.at<uchar>(i+2*img.size().width+1);
+        p22 = source.at<uchar>(i+2*img.size().width+2);
+        H = -p00-2*p01-p02+p20+2*p21+p22;
+        V = -p00+p02-2*p10+2*p12-p20+p22;
 
         GN = abs(H) + abs(V);
         if(GN > 255) GN = 255;
