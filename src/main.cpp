@@ -6,8 +6,18 @@
 using	namespace	std;
 using	namespace	cv;
 
+void printMat(const Mat& m){
+    for(int i = 0; i < m.rows; i++)
+    {
+        const char* pt = m.ptr<char>(i);
+        for(int j = 0; j < m.cols; j++)
+            std::cout << static_cast<int>(*(pt+j)) << " ";
+        std::cout << std::endl;
+    }
+}
 
-int convolution(const Mat& _img, const Mat& _kernel){
+
+float convolution_norm(const Mat& _img, const Mat& _kernel){
     if(_kernel.size != _img.size)
     {
         std:cerr << "Convolution impossible : size are different" << std::endl;
@@ -15,58 +25,106 @@ int convolution(const Mat& _img, const Mat& _kernel){
     }
     else
     {
-        int res = 0;
+        float res = 0;
         for(int i = 0; i < _img.rows; i++)
         {
-            uchar* pt = _img.ptr<uchar>(i);
-            for(int j = 0; j < _img.cols; j++)
-                res += *pt++;
+            const char* kernel_line = _kernel.ptr<char>(i);
+            const char* img_line = _img.ptr<char>(i);
+            for(int j = 0; j < _img.cols; j++){
+                res += *(kernel_line+j) * *(img_line+j);
+            }
         }
+        return res/(_kernel.rows * _kernel.cols);
     }
 }
-
+float convolution(const Mat& _img, const Mat& _kernel){
+    if(_kernel.size != _img.size)
+    {
+        std:cerr << "Convolution impossible : size are different" << std::endl;
+        return 0;
+    }
+    else
+    {
+        float res = 0;
+        for(int i = 0; i < _img.rows; i++)
+        {
+            const char* kernel_line = _kernel.ptr<char>(i);
+            const char* img_line = _img.ptr<char>(i);
+            for(int j = 0; j < _img.cols; j++){
+                res += *(kernel_line+j) * *(img_line+j);
+            }
+        }
+        if(res < 0) return 0;
+        if(res > 255) return 255;
+        return res;
+    }
+}
 void filter(Mat& _img, const Mat& _kernel)
 {
     Mat tmp;
-    for(int i = _kernel.rows/2; i < _img.rows-_kernel.rows/2; i++)
+    Mat reference_img = _img.clone();
+
+    for(int i = _kernel.rows/2; i < reference_img.rows-_kernel.rows/2; i++)
     {
-        uchar* prev_line = img.ptr<uchar>(i-1);
-        uchar* curr_line= _img.ptr<uchar>(i);
-        uchar* next_line= _img.ptr<uchar>(i+1);
-        for(int j = _kernel.cols/2; j < _img.cols-_kernel.cols/2; j++)
+        uchar* prev_line = reference_img.ptr<uchar>(i-1);
+        uchar* curr_line = reference_img.ptr<uchar>(i);
+        uchar* next_line = reference_img.ptr<uchar>(i+1);
+        uchar* current = _img.ptr<uchar>(i);
+        for(int j = _kernel.cols/2; j < reference_img.cols-_kernel.cols/2; j++)
         {
-            tmp = (Mat_<uchar>(3,3) << )
-        }
+            tmp = (Mat_<uchar>(3,3) <<  prev_line[j-1], prev_line[j], prev_line[j+1],
+                                        curr_line[j-1], curr_line[j], curr_line[j+1],
+                                        next_line[j-1], next_line[j], next_line[j+1]);
+
+            int res = convolution(tmp, _kernel);
+            *(current + j) = uchar(res);
+            }
     }
 
 }
+Mat sobel(Mat source)
+{
+    Mat img(source.size().height, source.size().width, CV_8UC1);
+    int p00, p01, p02, p10, p12, p20, p21, p22;
+    int H,V, GN;
+    for(int i  = 0; i < img.size().height * img.size().width; ++i)
+    {
+        p00 = source.at<uchar>(i);
+        p01 = source.at<uchar>(i+1);
+        p02 = source.at<uchar>(i+2);
+        p10 = source.at<uchar>(i+img.size().width);
+        p12 = source.at<uchar>(i+img.size().width+2);
+        p20 = source.at<uchar>(i+2*img.size().width);
+        p21 = source.at<uchar>(i+2*img.size().width+1);
+        p22 = source.at<uchar>(i+2*img.size().width+2);
+        H = -p00-2*p01-p02+p20+2*p21+p22;
+        V = -p00+p02-2*p10+2*p12-p20+p22;
 
+        GN = abs(H) + abs(V);
+        if(GN > 255) GN = 255;
+        img.at<uchar>(i) = GN;
+    }
+    return img;
+}
 
 int main()
 {
-    Mat kernel = (Mat_<uchar>(3,3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
+//    Mat kernel = (Mat_<char>(3,3) << -1,0,1,-2,0,2,-1,0,1);
+    Mat kernel = (Mat_<char>(3,3) << -1,-1,-1,-1,8,-1,-1,-1,-1);
 
-
-    Mat img = imread("ol.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread("lyon.jpg", CV_LOAD_IMAGE_GRAYSCALE);
     if(img.empty()){
         std::cout << "error image" << std::endl;
     }
-    namedWindow("win");
-    int p;
-    for(int i  = 0; i < img.size().height * img.size().width; ++i)
-    {
-        img.at<uchar>(i) = 0;
-    }
-    for(int i = 0; i < img.rows; i++)
-    {
-        uchar* Mi = img.ptr<uchar>(i);
-        for(int j = 0; j < img.cols; j++)
-            Mi[j] = 255;
-//            sum += std::max(Mi[j], 0.);
+    namedWindow("original");
+    namedWindow("filtered");
+    namedWindow("sobel");
+    imshow("original",img);
 
-    }
+    imshow("sobel",sobel(img));
+    filter(img, kernel);
 
-    imshow("win",img);
+    imshow("filtered",img);
     waitKey();
     return 0;
 }
@@ -125,30 +183,7 @@ si temps essayer d'en faire une vraie lib qi pourra être utilisée plus tard (p
 **/
 
 
-Mat sobel(Mat source)
-{
-    Mat img(source.size().height, source.size().width, CV_8UC1);
-    int p00, p01, p02, p10, p12, p20, p21, p22;
-    int H,V, GN;
-    for(int i  = 0; i < img.size().height * img.size().width; ++i)
-    {
-        p00 = source.at<uchar>(i);
-        p01 = source.at<uchar>(i+1);
-        p02 = source.at<uchar>(i+2);
-        p10 = source.at<uchar>(i+img.size().width);
-        p12 = source.at<uchar>(i+img.size().width+2);
-        p20 = source.at<uchar>(i+2*img.size().width);
-        p21 = source.at<uchar>(i+2*img.size().width+1);
-        p22 = source.at<uchar>(i+2*img.size().width+2);
-        H = -p00-2*p01-p02+p20+2*p21+p22;
-        V = -p00+p02-2*p10+2*p12-p20+p22;
 
-        GN = abs(H) + abs(V);
-        if(GN > 255) GN = 255;
-        img.at<uchar>(i) = GN;
-    }
-    return img;
-}
 
 
 Mat prewitt(Mat source)

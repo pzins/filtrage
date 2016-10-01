@@ -1,5 +1,6 @@
 project(Filtrage)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+set(CMAKE_BUILD_TYPE Debug)
 SET(CMAKE_CXX_FLAGS "-std=c++11")
 set (OpenCV_DIR /home/pierre/opencv/build)
 
