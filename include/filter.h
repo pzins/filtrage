@@ -6,14 +6,16 @@
 class Filter
 {
 private:
-    std::string name;
     int size;
     cv::Mat kernel;
+protected:
+    std::string name;
 public:
     Filter(const std::string& _name, int _size, const cv::Mat& _kernel);
     Filter(const std::string& _name, int _size);
     Filter();
     virtual ~Filter(){}
+    std::string& getName() {return name;}
 };
 
 #endif // FILTER_H

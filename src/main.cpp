@@ -2,10 +2,10 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include "manager.h"
+#include "meanfilter.h"
 
 using	namespace	std;
 using	namespace	cv;
-
 
 //print Mat image CV_8U
 void printMat(const Mat& m){
@@ -28,108 +28,29 @@ void printKernel(const Mat& m){
     }
 }
 
-//compute convolution with normalization
-float convolution_norm(const Mat& _img, const Mat& _kernel){
-    if(_kernel.size != _img.size)
-    {
-        std:cerr << "Convolution impossible : size are different" << std::endl;
-        return 0;
-    }
-    else
-    {
-        float res = 0;
-        for(int i = 0; i < _img.rows; i++)
-        {
-            const char* kernel_line = _kernel.ptr<char>(i);
-            const uchar* img_line = _img.ptr<uchar>(i);
-            for(int j = 0; j < _img.cols; j++){
-                res += static_cast<int>(*(kernel_line+j)) * static_cast<int>(*(img_line+j));
-            }
-        }
-        res = res/(_kernel.rows*_kernel.cols);
-        if(res < 0) return 0;
-        if(res > 255) return 255;
-        return res;
-    }
-}
-
-//computer convolution without normalization
-float convolution(const Mat& _img, const Mat& _kernel){
-    if(_kernel.size != _img.size)
-    {
-        std:cerr << "Convolution impossible : size are different" << std::endl;
-        return 0;
-    }
-    else
-    {
-        float res = 0;
-        for(int i = 0; i < _img.rows; i++)
-        {
-            const char* kernel_line = _kernel.ptr<char>(i);
-            const uchar* img_line = _img.ptr<uchar>(i);
-            for(int j = 0; j < _img.cols; j++){
-                res += static_cast<int>(*(kernel_line+j)) * static_cast<int>(*(img_line+j));
-            }
-        }
-        if(res < 0) return 0;
-        if(res > 255) return 255;
-        return res;
-    }
-}
-
-//filter _img with _kernel
-void filter(Mat& _img, const Mat& _kernel)
-{
-    if(_kernel.rows != _kernel.cols)
-    {
-        std::cerr << "Error filter : kernel not a square" << std::endl;
-    }
-    else if(_kernel.rows % 2 != 1)
-    {
-        std::cerr << "Error filter : bad size kernel" << std::endl;
-    }
-    else
-    {
-        Mat ref_img = _img.clone();
-        int len = _kernel.rows/2;
-
-        for(int i = len; i < ref_img.rows-len; i++)
-        {
-            uchar* element = _img.ptr<uchar>(i);
-            for(int j = len; j < ref_img.cols-len; j++)
-            {
-                Mat tmp = ref_img(Rect(j-len, i-len, 2*len+1, 2*len+1));
-                int res = convolution_norm(tmp, _kernel);
-                *(element + j) = uchar(res);
-            }
-        }
-    }
-}
 
 int main()
 {
 //    Mat kernel = (Mat_<char>(3,3) << -1,0,1,-2,0,2,-1,0,1);
 //    Mat kernel = (Mat_<char>(3,3) << -1,-1,-1,-1,8,-1,-1,-1,-1);
     Mat kernel = Mat::ones(7,7, CV_8U);
+    MeanFilter mf(3);
+    Manager m = Manager::getInstance();
+    m.addFilter(mf);
+    m.importImage("lyon","lyon.jpg");
 
-
-    Mat img = imread("trait.jpg", CV_LOAD_IMAGE_GRAYSCALE);
-    if(img.empty()){
-        std::cout << "error image" << std::endl;
-    }
     namedWindow("original");
-    imshow("original",img);
+    imshow("original",m.getImage("lyon"));
 
-    filter(img, kernel);
-
+    m.filter(m.getImage("lyon"), m.getKernel("mean"));
     namedWindow("filtered");
-    imshow("filtered",img);
+    imshow("filtered", m.getImage("lyon"));
     waitKey();
     return 0;
 }
 
 
-
+//add filterFactory
 
 /**
   filtre passe-bas :
