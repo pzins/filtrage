@@ -1,2 +1,2 @@
-# filtrage
-traitement d'images
+# Filtering
+Image processing tests
